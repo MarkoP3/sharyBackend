@@ -1,18 +1,16 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using SharyApi.Data;
 using SharyApi.Entities;
-using SharyApi.Models;
 using SharyApi.Models.Individual;
 using Stripe;
-using Stripe.BillingPortal;
 using Stripe.Checkout;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Threading.Tasks;
 using SessionCreateOptions = Stripe.Checkout.SessionCreateOptions;
 
 namespace SharyApi.Controllers
@@ -30,7 +28,7 @@ namespace SharyApi.Controllers
             DonationRepository = donationRepository;
             BusinessRepository = businessRepository;
             StripeConfiguration.ApiKey = Configuraiton["Stripe:Test:SecretKey"];
-           
+
         }
 
         public IConfiguration Configuraiton { get; }
@@ -39,14 +37,14 @@ namespace SharyApi.Controllers
         public IIndividualRepository IndividualRepository { get; }
         public IDonationRepository DonationRepository { get; }
         public IBusinessRepository BusinessRepository { get; }
-
+        [Authorize]
         [HttpPost("individual/money")]
         public IActionResult CreateCheckoutSession(MoneyDonationCreationDto moneyDonation)
         {
             Guid individualID;
             if (Request.Cookies["token"] != null)
             {
-                individualID =Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+                individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
             }
             else
             {
@@ -56,9 +54,9 @@ namespace SharyApi.Controllers
             var individual = IndividualRepository.GetIndividualByID(individualID);
             var options = new SessionCreateOptions
             {
-                ClientReferenceId=individualID.ToString(),
-                CustomerEmail=individual.Email,
-                SubmitType="donate",
+                ClientReferenceId = individualID.ToString(),
+                CustomerEmail = individual.Email,
+                SubmitType = "donate",
                 PaymentMethodTypes = new List<string>
                 {
                     "card"
@@ -81,14 +79,15 @@ namespace SharyApi.Controllers
                     },
                 },
                 Mode = "payment",
-                SuccessUrl = "http://localhost:3000/donation/money/success?individualID=" + individualID +"&quantity="+moneyDonation.Quantity+"&mealPriceID="+mealPrice.Id+ "&sessionId={CHECKOUT_SESSION_ID}",
-                CancelUrl = "http://localhost:3000/donation/money/cancel/",
+                SuccessUrl = "http://localhost:3000/individual/donation/money/success?individualID=" + individualID + "&quantity=" + moneyDonation.Quantity + "&mealPriceID=" + mealPrice.Id + "&sessionId={CHECKOUT_SESSION_ID}",
+                CancelUrl = "http://localhost:3000/individual/donation/money/cancel/",
             };
 
             var service = new Stripe.Checkout.SessionService();
             Stripe.Checkout.Session session = service.Create(options);
             return Ok(new { id = session.Id });
         }
+        [Authorize]
         [HttpPost("individual/solidarity")]
         public IActionResult CreateSolidarityCheckoutSession(SolidarityDonationCreationDto solidarityDonation)
         {
@@ -130,14 +129,15 @@ namespace SharyApi.Controllers
                     },
                 },
                 Mode = "payment",
-                SuccessUrl = "http://localhost:3000/donation/solidarity/success?individualID=" + individualID + "&quantity=" + solidarityDonation.Quantity + "&mealPriceID=" + mealPrice.Id + "&sessionId={CHECKOUT_SESSION_ID}&businessID="+solidarityDonation.BusinessId,
-                CancelUrl = "http://localhost:3000/donation/solidarity/cancel/",
+                SuccessUrl = "http://localhost:3000/individual/donation/solidarity/success?individualID=" + individualID + "&quantity=" + solidarityDonation.Quantity + "&mealPriceID=" + mealPrice.Id + "&sessionId={CHECKOUT_SESSION_ID}&businessID=" + solidarityDonation.BusinessId,
+                CancelUrl = "http://localhost:3000/individual/donation/solidarity/cancel/",
             };
 
             var service = new Stripe.Checkout.SessionService();
             Stripe.Checkout.Session session = service.Create(options);
             return Ok(new { id = session.Id });
         }
+        [Authorize]
         [HttpPost("individual/money/confirmation")]
         public IActionResult ConfirmMoneyDonation(MoneyDonationConfirmationDto moneyDonationDto)
         {
@@ -147,7 +147,7 @@ namespace SharyApi.Controllers
                 var response = service.Get(
                   moneyDonationDto.StripeSessionID
                 );
-                if (moneyDonationDto.IndividualID.ToString() == response.ClientReferenceId && response.PaymentStatus=="paid")
+                if (moneyDonationDto.IndividualID.ToString() == response.ClientReferenceId && response.PaymentStatus == "paid")
                 {
                     Console.WriteLine(response.PaymentStatus);
                     var moneyDonation = Mapper.Map<MoneyDonation>(moneyDonationDto);
@@ -159,11 +159,13 @@ namespace SharyApi.Controllers
                     return Ok();
                 }
                 return BadRequest();
-            }catch
+            }
+            catch
             {
                 return BadRequest();
             }
         }
+        [Authorize]
         [HttpPost("individual/solidarity/confirmation")]
         public IActionResult ConfirmSolidarityDonation(SolidarityDonationConfirmationDto solidarityDonationDto)
         {

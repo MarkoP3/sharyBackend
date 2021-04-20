@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -9,7 +10,6 @@ using SharyApi.Models;
 using SharyApi.Models.Individual;
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 
@@ -51,53 +51,54 @@ namespace SharyApi.Controllers
                 return NoContent();
             return Ok(Mapper.Map<IndividualDto>(individual));
         }
+        [Authorize]
         [HttpGet("getAccountData")]
+        [HttpHead("getAccountData")]
         public ActionResult<IndividualDto> GetAccountData()
         {
-            var individualID="";
-            if (Request.Cookies["token"] != null)
-            {
-                 individualID = new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value;
-            }
-            else {
-                return NoContent();
-            }
+            var individualID = new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value;
             var individual = IndividualRepository.GetIndividualByID(Guid.Parse(individualID));
 
             if (individual == null)
                 return NoContent();
             return Ok(Mapper.Map<IndividualDto>(individual));
         }
+        [Authorize]
         [HttpGet("donations/money")]
-        public ActionResult<MoneyDonationDto> GetYourMoneyDonations()
+        public ActionResult<MoneyDonationDto> GetYourMoneyDonations(int? page)
         {
+            if (page == null || page < 0)
+                page = 1;
             var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
             if (IndividualRepository.GetIndividualByID(individualID) != null)
             {
-                var donations = IndividualRepository.GetAllMoneyDonationsOfIndividual(individualID);
+                var donations = IndividualRepository.GetAllMoneyDonationsOfIndividual(individualID, (int)page);
                 if (donations.Count > 0)
-                    return Ok(Mapper.Map<List<MoneyDonationDto>>(donations));
+                    return Ok(new { numOfPages = IndividualRepository.GetNumberOfMoneyDonationsPages(individualID), moneyDonations = Mapper.Map<List<MoneyDonationDto>>(donations) });
                 return NoContent();
             }
             return BadRequest();
         }
+        [Authorize]
         [HttpGet("donations/solidarity")]
-        public ActionResult<SolidarityDinnerDonationDto> GetSolidarityDonations()
+        public ActionResult<SolidarityDinnerDonationDto> GetSolidarityDonations(int? page)
         {
+            if (page == null || page < 1)
+                page = 1;
             var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
             if (IndividualRepository.GetIndividualByID(individualID) != null)
             {
-                var donations = IndividualRepository.GetSolidarityDinners(individualID);
+                var donations = IndividualRepository.GetSolidarityDinners(individualID, (int)page);
                 if (donations.Count > 0)
-                    return Ok(Mapper.Map<List<SolidarityDinnerDonationDto>>(donations));
+                    return Ok(new { numOfPages = IndividualRepository.GetNumberOfSolidarityDonationsPages(individualID), solidarityDonations = Mapper.Map<List<SolidarityDinnerDonationDto>>(donations) });
                 return NoContent();
             }
             return BadRequest();
         }
-        [HttpGet("{ID}/donations/money")]
+        /*[HttpGet("{ID}/donations/money")]
         public ActionResult<MoneyDonationDto> GetMoneyDonationsOfIndividual(Guid ID)
         {
-            if(IndividualRepository.GetIndividualByID(ID)!=null)
+            if (IndividualRepository.GetIndividualByID(ID) != null)
             {
                 var donations = IndividualRepository.GetAllMoneyDonationsOfIndividual(ID);
                 if (donations.Count > 0)
@@ -105,7 +106,8 @@ namespace SharyApi.Controllers
                 return NoContent();
             }
             return BadRequest();
-        }
+        }*/
+        [Authorize]
         [HttpGet("logout")]
         public IActionResult LogOut()
         {
@@ -137,8 +139,8 @@ namespace SharyApi.Controllers
             if (AuthenticationHelper.AuthenticateIndividual(credentials))
             {
                 var createdToken = AuthenticationHelper.GenerateJwt(Mapper.Map<Principal>(IndividualRepository.GetIndividualCredentialsByUsername(credentials.Username)));
-                Response.Cookies.Append("token", createdToken, new CookieOptions() { HttpOnly =true,IsEssential=true,Expires=DateTime.Now.AddDays(10) }) ;
-                return Ok(new { token =createdToken });
+                Response.Cookies.Append("token", createdToken, new CookieOptions() { HttpOnly = true, IsEssential = true, Expires = DateTime.Now.AddDays(10) });
+                return Ok(new { token = createdToken });
             }
             return Unauthorized();
         }

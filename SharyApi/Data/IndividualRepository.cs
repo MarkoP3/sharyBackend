@@ -1,23 +1,25 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using SharyApi.Entities;
 using SharyApi.Models.Individual;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Data
 {
     public class IndividualRepository : IIndividualRepository
     {
-        public IndividualRepository(IMapper mapper, Shary2Context context)
+        public IndividualRepository(IMapper mapper, Shary2Context context, IConfiguration configuration)
         {
             Mapper = mapper;
             Context = context;
+            Configuration = configuration;
         }
 
         public IMapper Mapper { get; }
         public Shary2Context Context { get; }
+        public IConfiguration Configuration { get; }
 
         public IndividualConfirmationDto CreateIndividual(Individual individual)
         {
@@ -37,9 +39,9 @@ namespace SharyApi.Data
             return Context.Individuals.ToList();
         }
 
-        public ICollection<MoneyDonation> GetAllMoneyDonationsOfIndividual(Guid ID)
+        public ICollection<MoneyDonation> GetAllMoneyDonationsOfIndividual(Guid ID, int page)
         {
-            return Context.Individuals.Find(ID).MoneyDonations;
+            return Context.Individuals.Find(ID).MoneyDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList();
         }
 
         public Individual GetIndividualByID(Guid ID)
@@ -52,9 +54,19 @@ namespace SharyApi.Data
             return Context.Individuals.Where(i => i.Username == username).FirstOrDefault();
         }
 
-        public ICollection<SolidarityDinnerDonation> GetSolidarityDinners(Guid ID)
+        public int GetNumberOfMoneyDonationsPages(Guid id)
         {
-            return Context.Individuals.Find(ID).SolidarityDinnerDonations;
+            return (int)Math.Ceiling((decimal)Context.Individuals.Find(id).MoneyDonations.Count / Convert.ToDecimal(Configuration["recordsPerPage"]));
+        }
+
+        public int GetNumberOfSolidarityDonationsPages(Guid id)
+        {
+            return (int)Math.Ceiling((decimal)Context.Individuals.Find(id).SolidarityDinnerDonations.Count / Convert.ToDecimal(Configuration["recordsPerPage"]));
+        }
+
+        public ICollection<SolidarityDinnerDonation> GetSolidarityDinners(Guid ID, int page)
+        {
+            return Context.Individuals.Find(ID).SolidarityDinnerDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList(); ;
         }
 
         public bool SaveChanges()

@@ -2,8 +2,6 @@
 using SharyApi.Models.Individual;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Data
 {
@@ -14,8 +12,11 @@ namespace SharyApi.Data
         public Individual GetIndividualCredentialsByUsername(string username);
         public void DeleteIndividual(Guid ID);
         public IndividualConfirmationDto CreateIndividual(Individual individual);
-        public ICollection<MoneyDonation> GetAllMoneyDonationsOfIndividual(Guid ID);
-        public ICollection<SolidarityDinnerDonation> GetSolidarityDinners(Guid ID);
+        public ICollection<MoneyDonation> GetAllMoneyDonationsOfIndividual(Guid ID, int page);
+        public int GetNumberOfMoneyDonationsPages(Guid id);
+        public int GetNumberOfSolidarityDonationsPages(Guid id);
+
+        public ICollection<SolidarityDinnerDonation> GetSolidarityDinners(Guid ID, int page);
         public bool SaveChanges();
     }
 }

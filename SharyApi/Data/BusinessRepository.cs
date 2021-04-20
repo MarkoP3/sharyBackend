@@ -1,12 +1,8 @@
 ﻿using AutoMapper;
 using SharyApi.Entities;
-using SharyApi.Helpers;
-using SharyApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
 
 namespace SharyApi.Data
 {
@@ -50,6 +46,11 @@ namespace SharyApi.Data
             return Context.Businesses.ToList();
         }
 
+        public ICollection<Business> GetAllBusinessWithSolidarityDinners()
+        {
+            return Context.Businesses.Where(b => b.AcceptSolidarityMeal).ToList();
+        }
+
         public Business GetBusinessByID(Guid ID)
         {
             return Context.Businesses.Find(ID);
@@ -61,12 +62,12 @@ namespace SharyApi.Data
         }
         public ICollection<Business> GetBusinessWithSolidarityDinners(Guid cityID)
         {
-            return Context.Businesses.Where(b => b.AcceptSolidarityMeal && b.BusinessAddresses.Where(ba=>ba.CityId==cityID).ToList().Count>0).ToList();
+            return Context.Businesses.Where(b => b.AcceptSolidarityMeal && b.BusinessAddresses.Where(ba => ba.CityId == cityID).ToList().Count > 0).ToList();
         }
 
         public ICollection<City> GetCitiesOfSolidarityBusinesses(Guid countryID)
         {
-            return Context.Cities.Where(c => c.BusinessAddresses.Where(ba => ba.Business.AcceptSolidarityMeal == true).ToList().Count > 0 && c.CountryId==countryID).ToList();
+            return Context.Cities.Where(c => c.BusinessAddresses.Where(ba => ba.Business.AcceptSolidarityMeal == true).ToList().Count > 0 && c.CountryId == countryID).ToList();
         }
 
         public ICollection<Country> GetCountriesSolidarityDinner()
@@ -83,6 +84,6 @@ namespace SharyApi.Data
         {
             return Context.SaveChanges() > 0;
         }
-        
+
     }
 }

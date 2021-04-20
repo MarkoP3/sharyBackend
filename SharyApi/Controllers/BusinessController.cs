@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Controllers
 {
@@ -60,7 +59,7 @@ namespace SharyApi.Controllers
             }
             else
             {
-                return NoContent();
+                return Unauthorized();
             }
             var business = BusinessRepository.GetBusinessByID(Guid.Parse(businessID));
             if (business == null)
@@ -154,9 +153,13 @@ namespace SharyApi.Controllers
             return Ok(Mapper.Map<ICollection<CityDto>>(BusinessRepository.GetCitiesOfSolidarityBusinesses(country)));
         }
         [HttpGet("solidarity")]
-        public ActionResult<ICollection<BusinessDto>> GetSolidarityBusinesses(Guid city)
+        public ActionResult<ICollection<BusinessDto>> GetSolidarityBusinesses(Guid? city)
         {
-            return Ok(Mapper.Map<ICollection<BusinessDto>>(BusinessRepository.GetBusinessWithSolidarityDinners(city)));
+            if (city == null)
+            {
+                return Ok(Mapper.Map<ICollection<BusinessDto>>(BusinessRepository.GetAllBusinessWithSolidarityDinners()));
+            }
+            return Ok(Mapper.Map<ICollection<BusinessDto>>(BusinessRepository.GetBusinessWithSolidarityDinners((Guid)city)));
         }
     }
 }

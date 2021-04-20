@@ -3,12 +3,9 @@ using Microsoft.IdentityModel.Tokens;
 using SharyApi.Data;
 using SharyApi.Models;
 using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace SharyApi.Helpers
 {
@@ -52,7 +49,7 @@ namespace SharyApi.Helpers
                 salt
             );
         }
-        public string HashPassword(string password,string salt)
+        public string HashPassword(string password, string salt)
         {
             var sBytes = Convert.FromBase64String(salt);
             var derivedBytes = new Rfc2898DeriveBytes(password, sBytes);
@@ -72,12 +69,11 @@ namespace SharyApi.Helpers
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken("Shary",
+            var token = new JwtSecurityToken(Configuration["Jwt:Issuer"],
                                              principal.Id.ToString(),
                                              null,
                                              expires: DateTime.Now.AddMinutes(120),
                                              signingCredentials: credentials);
-
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 

@@ -1,9 +1,6 @@
 ﻿using SharyApi.Entities;
-using SharyApi.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Data
 {
@@ -17,6 +14,7 @@ namespace SharyApi.Data
         ICollection<BusinessAddress> GetAllAddressesOfBusiness(Guid businessId);
         BusinessAddress CreateBusinessAddress(BusinessAddress address);
         ICollection<Business> GetBusinessWithSolidarityDinners(Guid cityID);
+        ICollection<Business> GetAllBusinessWithSolidarityDinners();
         ICollection<City> GetCitiesOfSolidarityBusinesses(Guid countryID);
         ICollection<Country> GetCountriesSolidarityDinner();
         SolidarityMealPrice GetMealPriceOfBusiness(Guid ID);
