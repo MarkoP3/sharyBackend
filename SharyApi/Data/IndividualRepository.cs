@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Configuration;
 using SharyApi.Entities;
 using SharyApi.Models.Individual;
@@ -44,7 +45,7 @@ namespace SharyApi.Data
             return Context.Individuals.Find(ID).MoneyDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList();
         }
 
-        public Individual GetIndividualByID(Guid ID)
+        public Maybe<Individual> GetIndividualByID(Guid ID)
         {
             return Context.Individuals.Find(ID);
         }

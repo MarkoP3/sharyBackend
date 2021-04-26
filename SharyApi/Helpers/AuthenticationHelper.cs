@@ -11,15 +11,17 @@ namespace SharyApi.Helpers
 {
     public class AuthenticationHelper : IAuthenticationHelper
     {
-        public AuthenticationHelper(IConfiguration configuration, IBusinessRepository businessRepository, IIndividualRepository individualRepository)
+        public AuthenticationHelper(IConfiguration configuration, IBusinessRepository businessRepository, IIndividualRepository individualRepository, IStationRepository stationRepository)
         {
             BusinessRepository = businessRepository;
             IndividualRepository = individualRepository;
+            StationRepository = stationRepository;
             Configuration = configuration;
         }
 
         public IBusinessRepository BusinessRepository { get; }
         public IIndividualRepository IndividualRepository { get; }
+        public IStationRepository StationRepository { get; }
         public IConfiguration Configuration { get; }
 
         public bool AuthenticateBusiness(Credentials credentials)
@@ -77,5 +79,13 @@ namespace SharyApi.Helpers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        public bool AuthenticateStation(Credentials credentials)
+        {
+
+            var principal = StationRepository.GetStationByUsername(credentials.Username);
+            if (principal.HasNoValue)
+                return false;
+            return SlowEquals(principal.Value.Password, HashPassword(credentials.Password, principal.Value.Salt));
+        }
     }
 }

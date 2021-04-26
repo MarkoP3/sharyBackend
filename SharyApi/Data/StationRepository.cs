@@ -1,18 +1,17 @@
-﻿using SharyApi.Entities;
+﻿using CSharpFunctionalExtensions;
+using SharyApi.Entities;
 using SharyApi.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Data
 {
     public class StationRepository : IStationRepository
     {
-        public StationRepository(Shary2Context context, IAuthenticationHelper authenticationHelper)
+        public StationRepository(Shary2Context context)
         {
             Context = context;
-            AuthenticationHelper = authenticationHelper;
         }
 
         public Shary2Context Context { get; }
@@ -23,9 +22,14 @@ namespace SharyApi.Data
             return Context.MealPrices.Where(x => x.ValidTo == null).FirstOrDefault();
         }
 
-        public Station GetStationByID(Guid ID)
+        public Maybe<Station> GetStationByID(Guid ID)
         {
             return Context.Stations.Find(ID);
+        }
+
+        public Maybe<Station> GetStationByUsername(string username)
+        {
+            return Context.Stations.TryFirst(station => station.Username == username);
         }
 
         public ICollection<Station> GetStations()
@@ -35,7 +39,8 @@ namespace SharyApi.Data
 
         public ReceivedMeal ReceiveMeal(ReceivedMeal receivedMeals)
         {
-            throw new NotImplementedException();
+            var receivedMeal = Context.Add(receivedMeals);
+            return receivedMeal.Entity;
         }
 
         public bool SaveChanges()

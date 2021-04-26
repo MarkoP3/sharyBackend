@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using SharyApi.Data;
 using SharyApi.Entities;
-using SharyApi.Models.Individual;
+using SharyApi.Helpers;
+using SharyApi.Models;
 using SharyApi.Models.Station;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 
 namespace SharyApi.Controllers
@@ -16,13 +19,15 @@ namespace SharyApi.Controllers
     [ApiController]
     public class StationController : ControllerBase
     {
-        public StationController(IStationRepository stationRepository, IMapper mapper, LinkGenerator linkGenerator)
+        public StationController(IAuthenticationHelper authenticationHelper, IStationRepository stationRepository, IMapper mapper, LinkGenerator linkGenerator)
         {
+            AuthenticationHelper = authenticationHelper;
             StationRepository = stationRepository;
             Mapper = mapper;
             LinkGenerator = linkGenerator;
         }
 
+        public IAuthenticationHelper AuthenticationHelper { get; }
         public IStationRepository StationRepository { get; }
         public IMapper Mapper { get; }
         public LinkGenerator LinkGenerator { get; }
@@ -43,21 +48,49 @@ namespace SharyApi.Controllers
                 return Mapper.Map<List<StationDto>>(stations);
             return NoContent();
         }
-        [HttpGet("{ID}/shareMeal")]
-        public ActionResult<SharedMealDto> ShareMeal(Guid ID)
+        [Authorize]
+        [HttpGet("shareMeal")]
+        public ActionResult<SharedMealDto> ShareMeal()
         {
-                var station = StationRepository.GetStationByID(ID);
-                if( station == null || (station.ReceivedMeals.Sum(x=>x.Quantity)-station.SharedMeals.Count)<=0)
-                    return BadRequest("No available meals for sharing");
-                var sharedMeal = StationRepository.ShareMeal(ID);
-                StationRepository.SaveChanges();
-                string location = LinkGenerator.GetPathByAction("GetBusinessByID", "Business", new { ID = sharedMeal.Id });
-                return Created(location, Mapper.Map<SharedMealDto>(sharedMeal));
+            Guid ID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            var station = StationRepository.GetStationByID(ID);
+            if (station.HasNoValue || (station.Value.ReceivedMeals.Sum(x => x.Quantity) - station.Value.SharedMeals.Count) <= 0)
+                return BadRequest("No available meals for sharing");
+            var sharedMeal = StationRepository.ShareMeal(ID);
+            StationRepository.SaveChanges();
+            string location = LinkGenerator.GetPathByAction("GetBusinessByID", "Business", new { ID = sharedMeal.Id });
+            return Created(location, Mapper.Map<SharedMealDto>(sharedMeal));
         }
-        [HttpGet("mealPrice")]
-        public ActionResult<MealPriceDto> GetActiveMealPrice()
+        [Authorize]
+        [HttpPost("receiveMeals")]
+        public ActionResult<ReceivedMealDto> ReceiveMeals(ReceivedMealDto receivedMealDto)
         {
-            return Ok(Mapper.Map<MealPriceDto>(StationRepository.GetActiveMealPrice()));
+            Guid ID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            var station = StationRepository.GetStationByID(ID);
+            if (station.HasNoValue)
+                return BadRequest();
+            receivedMealDto.StationId = ID;
+            receivedMealDto.Id = Guid.NewGuid();
+            var receivedMeal = StationRepository.ReceiveMeal(Mapper.Map<ReceivedMeal>(receivedMealDto));
+            StationRepository.SaveChanges();
+            return Ok(Mapper.Map<ReceivedMeal>(receivedMeal));
+        }
+        [HttpPost("authenticate")]
+        public IActionResult Authenticate(Credentials credentials)
+        {
+            var cred = AuthenticationHelper.HashPassword("123");
+            Console.WriteLine(cred.Item1);
+            Console.WriteLine(cred.Item2);
+            if (AuthenticationHelper.AuthenticateStation(credentials))
+            {
+                var station = StationRepository.GetStationByUsername(credentials.Username);
+                if (station.HasNoValue)
+                    return NotFound();
+                var createdToken = AuthenticationHelper.GenerateJwt(Mapper.Map<Principal>(station.Value));
+                Response.Cookies.Append("token", createdToken, new CookieOptions() { HttpOnly = true, IsEssential = true, Expires = DateTime.Now.AddDays(10) });
+                return Ok(new { token = createdToken });
+            }
+            return Unauthorized();
         }
 
     }

@@ -1,4 +1,5 @@
-﻿using SharyApi.Entities;
+﻿using CSharpFunctionalExtensions;
+using SharyApi.Entities;
 using SharyApi.Models.Individual;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ namespace SharyApi.Data
     public interface IIndividualRepository
     {
         public ICollection<Individual> GetAllIndividuals();
-        public Individual GetIndividualByID(Guid ID);
+        public Maybe<Individual> GetIndividualByID(Guid ID);
         public Individual GetIndividualCredentialsByUsername(string username);
         public void DeleteIndividual(Guid ID);
         public IndividualConfirmationDto CreateIndividual(Individual individual);

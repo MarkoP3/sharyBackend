@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using SharyApi.Data;
 using SharyApi.Entities;
+using SharyApi.Models;
 using SharyApi.Models.Individual;
 using Stripe;
 using Stripe.Checkout;
@@ -52,10 +53,12 @@ namespace SharyApi.Controllers
             }
             var mealPrice = Mapper.Map<MealPriceDto>(StationRepository.GetActiveMealPrice());
             var individual = IndividualRepository.GetIndividualByID(individualID);
+            if (individual.HasNoValue)
+                return NotFound();
             var options = new SessionCreateOptions
             {
                 ClientReferenceId = individualID.ToString(),
-                CustomerEmail = individual.Email,
+                CustomerEmail = individual.Value.Email,
                 SubmitType = "donate",
                 PaymentMethodTypes = new List<string>
                 {
@@ -102,10 +105,12 @@ namespace SharyApi.Controllers
             }
             var mealPrice = BusinessRepository.GetMealPriceOfBusiness(solidarityDonation.BusinessId);
             var individual = IndividualRepository.GetIndividualByID(individualID);
+            if (individual.HasNoValue)
+                return NotFound();
             var options = new SessionCreateOptions
             {
                 ClientReferenceId = individualID.ToString(),
-                CustomerEmail = individual.Email,
+                CustomerEmail = individual.Value.Email,
                 SubmitType = "donate",
                 PaymentMethodTypes = new List<string>
                 {
@@ -141,21 +146,37 @@ namespace SharyApi.Controllers
         [HttpPost("individual/money/confirmation")]
         public IActionResult ConfirmMoneyDonation(MoneyDonationConfirmationDto moneyDonationDto)
         {
+            Console.WriteLine(moneyDonationDto.IndividualID);
+            Console.WriteLine(moneyDonationDto.Quantity);
+            Console.WriteLine(moneyDonationDto.StripeSessionID);
+            Console.WriteLine(moneyDonationDto.MealPriceID);
+            Guid individualID;
+            if (Request.Cookies["token"] != null)
+            {
+                individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            }
+            else
+            {
+                return NoContent();
+            }
+            Console.WriteLine(individualID);
             try
             {
                 var service = new Stripe.Checkout.SessionService();
                 var response = service.Get(
                   moneyDonationDto.StripeSessionID
                 );
-                if (moneyDonationDto.IndividualID.ToString() == response.ClientReferenceId && response.PaymentStatus == "paid")
+                if (individualID.ToString() == response.ClientReferenceId && response.PaymentStatus == "paid")
                 {
-                    Console.WriteLine(response.PaymentStatus);
                     var moneyDonation = Mapper.Map<MoneyDonation>(moneyDonationDto);
                     moneyDonation.Id = Guid.NewGuid();
                     moneyDonation.DonationDateTime = DateTime.Now;
                     moneyDonation.StripePaymentId = response.PaymentIntentId;
+                    moneyDonation.IndividualId = individualID;
                     DonationRepository.CreateMoneyDonation(moneyDonation);
+                    Console.WriteLine("tu sam");
                     DonationRepository.SaveChanges();
+                    Console.WriteLine("eto me opet tu");
                     return Ok();
                 }
                 return BadRequest();
@@ -192,6 +213,35 @@ namespace SharyApi.Controllers
             {
                 return BadRequest();
             }
+        }
+        [Authorize]
+        [HttpGet("individual/money")]
+        public ActionResult<MoneyDonationDto> GetYourMoneyDonations(int? page)
+        {
+            if (page == null || page < 0)
+                page = 1;
+            var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            if (IndividualRepository.GetIndividualByID(individualID).HasNoValue)
+                return BadRequest();
+            var donations = IndividualRepository.GetAllMoneyDonationsOfIndividual(individualID, (int)page);
+            if (donations.Count > 0)
+                return Ok(new { numOfPages = IndividualRepository.GetNumberOfMoneyDonationsPages(individualID), moneyDonations = Mapper.Map<List<MoneyDonationDto>>(donations) });
+            return NoContent();
+        }
+        [Authorize]
+        [HttpGet("individual/solidarity")]
+        public ActionResult<SolidarityDinnerDonationDto> GetSolidarityDonations(int? page)
+        {
+            if (page == null || page < 1)
+                page = 1;
+            var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            if (IndividualRepository.GetIndividualByID(individualID).HasNoValue)
+                return BadRequest();
+
+            var donations = IndividualRepository.GetSolidarityDinners(individualID, (int)page);
+            if (donations.Count > 0)
+                return Ok(new { numOfPages = IndividualRepository.GetNumberOfSolidarityDonationsPages(individualID), solidarityDonations = Mapper.Map<List<SolidarityDinnerDonationDto>>(donations) });
+            return NoContent();
         }
     }
 }

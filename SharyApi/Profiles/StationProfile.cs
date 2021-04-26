@@ -1,23 +1,21 @@
 ﻿using AutoMapper;
 using SharyApi.Entities;
+using SharyApi.Models;
 using SharyApi.Models.Individual;
 using SharyApi.Models.Station;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SharyApi.Profiles
 {
-    public class StationProfile: Profile
+    public class StationProfile : Profile
     {
         public StationProfile()
         {
 
             CreateMap<Station, StationDto>()
                 .ForMember(
-                dest=>dest.City,
-                opt=>opt.MapFrom(s=>s.StationAddress.City.Name)
+                dest => dest.City,
+                opt => opt.MapFrom(s => s.StationAddress.City.Name)
                 ).ForMember(
                 dest => dest.Country,
                 opt => opt.MapFrom(s => s.StationAddress.City.Country.Name)
@@ -38,10 +36,10 @@ namespace SharyApi.Profiles
                 opt => opt.MapFrom(s => s.SharedMeals.Count)
                 ).ForMember(
                 dest => dest.ReceivedMeals,
-                opt => opt.MapFrom(s => s.ReceivedMeals.Sum(x=>x.Quantity))
+                opt => opt.MapFrom(s => s.ReceivedMeals.Sum(x => x.Quantity))
                 ).ForMember(
                 dest => dest.AwaitingMeals,
-                opt => opt.MapFrom(s => s.FoodDonations.Where(x=>x.ReceivedMeals.Count==0).Sum(x=>x.Quantity))
+                opt => opt.MapFrom(s => s.FoodDonations.Where(x => x.ReceivedMeals.Count == 0).Sum(x => x.Quantity))
                 );
             CreateMap<SharedMeal, SharedMealDto>();
             CreateMap<MealPrice, MealPriceDto>()
@@ -49,6 +47,7 @@ namespace SharyApi.Profiles
                 dest => dest.Code,
                 opt => opt.MapFrom(src => src.Currency.Code)
                 );
+            CreateMap<Station, Principal>();
 
         }
     }

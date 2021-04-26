@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -42,14 +43,10 @@ namespace SharyApi.Controllers
             return NoContent();
         }
         [HttpGet("{ID}")]
-        public ActionResult<BusinessDto> GetBusinessByID(Guid ID)
-        {
-            var business = BusinessRepository.GetBusinessByID(ID);
-            if (business == null)
-                return NoContent();
-            return Ok(Mapper.Map<BusinessDto>(business));
-        }
-        [HttpGet("getAccountData")]
+        public ActionResult<BusinessDto> GetBusinessByID(Guid ID) => BusinessRepository.GetBusinessByID(ID).Match<ActionResult<BusinessDto>>(None: () => NoContent(), Some: (business) => Ok(Mapper.Map<BusinessDto>(business)));
+        [Authorize]
+        [HttpGet("accountData")]
+        [HttpHead("accountData")]
         public ActionResult<BusinessDto> GetAccountData()
         {
             var businessID = "";
@@ -105,41 +102,28 @@ namespace SharyApi.Controllers
         [HttpDelete("{ID}")]
         public IActionResult DeleteBusiness(Guid ID)
         {
-            try
+            return BusinessRepository.GetBusinessByID(ID).Match<IActionResult>(None: () => NotFound(), Some: (data) =>
             {
-                var business = BusinessRepository.GetBusinessByID(ID);
-                if (business == null)
-                {
-                    return NotFound();
-                }
                 BusinessRepository.DeleteBusiness(ID);
                 BusinessRepository.SaveChanges();
                 return NoContent();
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error while deleting an object");
-            }
+            });
         }
         [HttpPut]
         public ActionResult<BusinessDto> UpdateBusiness(BusinessUpdateDto businessDto)
         {
-            try
-            {
-                var oldBusiness = BusinessRepository.GetBusinessByID(businessDto.Id);
-                if (oldBusiness == null)
-                    return NotFound();
-                Business business = Mapper.Map<Business>(businessDto);
 
-                Mapper.Map(business, oldBusiness);
+            return BusinessRepository.GetBusinessByID(businessDto.Id).Match<ActionResult<BusinessDto>>(None: () => NotFound(), Some: (data) =>
+                 {
+                     Business oldBusiness = data;
+                     Console.WriteLine(data.GetType());
+                     Business business = Mapper.Map<Business>(businessDto);
 
-                BusinessRepository.SaveChanges();
-                return Ok(Mapper.Map<BusinessDto>(oldBusiness));
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Update error");
-            }
+                     Mapper.Map(business, oldBusiness);
+                     BusinessRepository.SaveChanges();
+                     return Ok(Mapper.Map<BusinessDto>(oldBusiness));
+                 });
+
         }
 
         [HttpGet("solidarity/countries")]
@@ -161,5 +145,11 @@ namespace SharyApi.Controllers
             }
             return Ok(Mapper.Map<ICollection<BusinessDto>>(BusinessRepository.GetBusinessWithSolidarityDinners((Guid)city)));
         }
+        [HttpGet("{id}/mealPrice")]
+        public ActionResult<SolidarityMealPriceDto> GetSolidarityMealPriceOfBusiness(Guid id)
+        {
+            return Mapper.Map<SolidarityMealPriceDto>(BusinessRepository.GetMealPriceOfBusiness(id));
+        }
+
     }
 }

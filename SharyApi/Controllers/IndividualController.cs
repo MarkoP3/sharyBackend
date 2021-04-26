@@ -19,19 +19,20 @@ namespace SharyApi.Controllers
     [ApiController]
     public class IndividualController : ControllerBase
     {
-        public IndividualController(IIndividualRepository individualRepository, IMapper mapper, LinkGenerator linkGenerator, IAuthenticationHelper authenticationHelper)
+        public IndividualController(IIndividualRepository individualRepository, IMapper mapper, LinkGenerator linkGenerator, IAuthenticationHelper authenticationHelper, IStationRepository stationRepository)
         {
             IndividualRepository = individualRepository;
             Mapper = mapper;
             LinkGenerator = linkGenerator;
             AuthenticationHelper = authenticationHelper;
+            StationRepository = stationRepository;
         }
 
         public IIndividualRepository IndividualRepository { get; }
         public IMapper Mapper { get; }
         public LinkGenerator LinkGenerator { get; }
         public IAuthenticationHelper AuthenticationHelper { get; }
-
+        public IStationRepository StationRepository { get; }
 
         [HttpGet]
         public ActionResult<List<IndividualDto>> GetAllIndividuals()
@@ -46,55 +47,21 @@ namespace SharyApi.Controllers
         [HttpGet("{ID}")]
         public ActionResult<IndividualDto> GetIndividualByID(Guid ID)
         {
-            var individual = IndividualRepository.GetIndividualByID(ID);
-            if (individual == null)
-                return NoContent();
-            return Ok(Mapper.Map<IndividualDto>(individual));
+            return (IndividualRepository.GetIndividualByID(ID).HasNoValue ? NotFound() : Ok(Mapper.Map<IndividualDto>(IndividualRepository.GetIndividualByID(ID).Value)));
         }
         [Authorize]
-        [HttpGet("getAccountData")]
-        [HttpHead("getAccountData")]
+        [HttpGet("accountData")]
+        [HttpHead("accountData")]
         public ActionResult<IndividualDto> GetAccountData()
         {
             var individualID = new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value;
             var individual = IndividualRepository.GetIndividualByID(Guid.Parse(individualID));
 
-            if (individual == null)
+            if (individual.HasNoValue)
                 return NoContent();
-            return Ok(Mapper.Map<IndividualDto>(individual));
+            return Ok(Mapper.Map<IndividualDto>(individual.Value));
         }
-        [Authorize]
-        [HttpGet("donations/money")]
-        public ActionResult<MoneyDonationDto> GetYourMoneyDonations(int? page)
-        {
-            if (page == null || page < 0)
-                page = 1;
-            var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
-            if (IndividualRepository.GetIndividualByID(individualID) != null)
-            {
-                var donations = IndividualRepository.GetAllMoneyDonationsOfIndividual(individualID, (int)page);
-                if (donations.Count > 0)
-                    return Ok(new { numOfPages = IndividualRepository.GetNumberOfMoneyDonationsPages(individualID), moneyDonations = Mapper.Map<List<MoneyDonationDto>>(donations) });
-                return NoContent();
-            }
-            return BadRequest();
-        }
-        [Authorize]
-        [HttpGet("donations/solidarity")]
-        public ActionResult<SolidarityDinnerDonationDto> GetSolidarityDonations(int? page)
-        {
-            if (page == null || page < 1)
-                page = 1;
-            var individualID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
-            if (IndividualRepository.GetIndividualByID(individualID) != null)
-            {
-                var donations = IndividualRepository.GetSolidarityDinners(individualID, (int)page);
-                if (donations.Count > 0)
-                    return Ok(new { numOfPages = IndividualRepository.GetNumberOfSolidarityDonationsPages(individualID), solidarityDonations = Mapper.Map<List<SolidarityDinnerDonationDto>>(donations) });
-                return NoContent();
-            }
-            return BadRequest();
-        }
+
         /*[HttpGet("{ID}/donations/money")]
         public ActionResult<MoneyDonationDto> GetMoneyDonationsOfIndividual(Guid ID)
         {
@@ -180,6 +147,11 @@ namespace SharyApi.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Update error");
             }
+        }
+        [HttpGet("mealPrice")]
+        public ActionResult<MealPriceDto> GetActiveMealPrice()
+        {
+            return Ok(Mapper.Map<MealPriceDto>(StationRepository.GetActiveMealPrice()));
         }
 
 

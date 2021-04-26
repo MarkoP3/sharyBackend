@@ -1,8 +1,11 @@
 ﻿using AutoMapper;
+using CSharpFunctionalExtensions;
+using LaYumba.Functional;
 using SharyApi.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static LaYumba.Functional.F;
 
 namespace SharyApi.Data
 {
@@ -51,11 +54,7 @@ namespace SharyApi.Data
             return Context.Businesses.Where(b => b.AcceptSolidarityMeal).ToList();
         }
 
-        public Business GetBusinessByID(Guid ID)
-        {
-            return Context.Businesses.Find(ID);
-        }
-
+        public Option<Business> GetBusinessByID(Guid ID) => Context.Businesses.Find(ID) != null ? Some(Context.Businesses.FirstOrDefault(business => business.Id == ID)) : None;
         public Business GetBusinessCredentialsByUsername(string username)
         {
             return Context.Businesses.Where(b => b.Username == username).FirstOrDefault();

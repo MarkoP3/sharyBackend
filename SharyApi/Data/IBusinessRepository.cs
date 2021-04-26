@@ -1,4 +1,5 @@
-﻿using SharyApi.Entities;
+﻿using LaYumba.Functional;
+using SharyApi.Entities;
 using System;
 using System.Collections.Generic;
 
@@ -7,7 +8,7 @@ namespace SharyApi.Data
     public interface IBusinessRepository
     {
         ICollection<Business> GetAllBusinesses();
-        Business GetBusinessByID(Guid ID);
+        Option<Business> GetBusinessByID(Guid ID);
         Business GetBusinessCredentialsByUsername(string username);
         void DeleteBusiness(Guid ID);
         Business CreateBusiness(Business business);
