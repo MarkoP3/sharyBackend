@@ -13,6 +13,7 @@ namespace SharyApi.Data
         ReceivedMeal ReceiveMeal(ReceivedMeal receivedMeals);
         MealPrice GetActiveMealPrice();
         Maybe<Station> GetStationByUsername(string username);
+        Station CreateStation(Station station);
         bool SaveChanges();
     }
 }

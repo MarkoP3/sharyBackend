@@ -38,7 +38,7 @@ namespace SharyApi.Controllers
             var station = StationRepository.GetStationByID(ID);
             if (station == null)
                 return NoContent();
-            return Ok(Mapper.Map<StationDto>(station));
+            return Ok(Mapper.Map<StationDto>(station.Value));
         }
         [HttpGet]
         public ActionResult<ICollection<StationDto>> GetStations(Guid ID)
@@ -75,12 +75,20 @@ namespace SharyApi.Controllers
             StationRepository.SaveChanges();
             return Ok(Mapper.Map<ReceivedMeal>(receivedMeal));
         }
+        [HttpPost]
+        public ActionResult<StationDto> CreateStation(StationCreationDto stationDto)
+        {
+            var station = Mapper.Map<Station>(stationDto);
+            var hashedPassword = AuthenticationHelper.HashPassword(station.Password);
+            station.Password = hashedPassword.Item1;
+            station.Salt = hashedPassword.Item2;
+            Station stationConfirmation = StationRepository.CreateStation(station);
+            StationRepository.SaveChanges();
+            return Created("", stationConfirmation.Id);
+        }
         [HttpPost("authenticate")]
         public IActionResult Authenticate(Credentials credentials)
         {
-            var cred = AuthenticationHelper.HashPassword("123");
-            Console.WriteLine(cred.Item1);
-            Console.WriteLine(cred.Item2);
             if (AuthenticationHelper.AuthenticateStation(credentials))
             {
                 var station = StationRepository.GetStationByUsername(credentials.Username);

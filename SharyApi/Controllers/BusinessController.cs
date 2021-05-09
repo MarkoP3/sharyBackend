@@ -49,19 +49,11 @@ namespace SharyApi.Controllers
         [HttpHead("accountData")]
         public ActionResult<BusinessDto> GetAccountData()
         {
-            var businessID = "";
-            if (Request.Cookies["token"] != null)
-            {
-                businessID = new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value;
-            }
-            else
-            {
-                return Unauthorized();
-            }
-            var business = BusinessRepository.GetBusinessByID(Guid.Parse(businessID));
-            if (business == null)
-                return NoContent();
-            return Ok(Mapper.Map<BusinessDto>(business));
+            var businessID = new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value; ;
+            return BusinessRepository.GetBusinessByID(Guid.Parse(businessID))
+                .Match<ActionResult<BusinessDto>>
+                (None: () => NoContent(),
+                Some: (data) => Ok(Mapper.Map<BusinessDto>(data)));
         }
         [HttpGet("logout")]
         public IActionResult LogOut()
@@ -72,21 +64,14 @@ namespace SharyApi.Controllers
         [HttpPost]
         public ActionResult<BusinessConfirmationDto> CreateBusiness(BusinessCreationDto businessDto)
         {
-            try
-            {
-                var business = Mapper.Map<Business>(businessDto);
-                var hashedPassword = AuthenticationHelper.HashPassword(business.Password);
-                business.Password = hashedPassword.Item1;
-                business.Salt = hashedPassword.Item2;
-                Business businessConfirmation = BusinessRepository.CreateBusiness(business);
-                BusinessRepository.SaveChanges();
-                string location = LinkGenerator.GetPathByAction("GetBusinessByID", "Business", new { ID = businessConfirmation.Id });
-                return Created(location, Mapper.Map<BusinessConfirmationDto>(businessConfirmation));
-            }
-            catch
-            {
-                return BadRequest();
-            }
+            var business = Mapper.Map<Business>(businessDto);
+            var hashedPassword = AuthenticationHelper.HashPassword(business.Password);
+            business.Password = hashedPassword.Item1;
+            business.Salt = hashedPassword.Item2;
+            Business businessConfirmation = BusinessRepository.CreateBusiness(business);
+            BusinessRepository.SaveChanges();
+            string location = LinkGenerator.GetPathByAction("GetBusinessByID", "Business", new { ID = businessConfirmation.Id });
+            return Created(location, Mapper.Map<BusinessConfirmationDto>(businessConfirmation));
         }
         [HttpPost("authenticate")]
         public IActionResult Authenticate(Credentials credentials)
@@ -116,10 +101,13 @@ namespace SharyApi.Controllers
             return BusinessRepository.GetBusinessByID(businessDto.Id).Match<ActionResult<BusinessDto>>(None: () => NotFound(), Some: (data) =>
                  {
                      Business oldBusiness = data;
-                     Console.WriteLine(data.GetType());
-                     Business business = Mapper.Map<Business>(businessDto);
-
-                     Mapper.Map(business, oldBusiness);
+                     oldBusiness.Name = businessDto.Name;
+                     oldBusiness.Tin = businessDto.Tin;
+                     oldBusiness.BankAccount = businessDto.BankAccount;
+                     oldBusiness.Email = businessDto.Email;
+                     oldBusiness.PhoneNumber = businessDto.PhoneNumber;
+                     oldBusiness.Username = businessDto.Username;
+                     oldBusiness.AcceptSolidarityMeal = businessDto.AcceptSolidarityMeal;
                      BusinessRepository.SaveChanges();
                      return Ok(Mapper.Map<BusinessDto>(oldBusiness));
                  });

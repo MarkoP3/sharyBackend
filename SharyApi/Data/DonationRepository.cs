@@ -11,6 +11,12 @@ namespace SharyApi.Data
 
         public Shary2Context Context { get; }
 
+        public FoodDonation CreateFoodDonation(FoodDonation donation)
+        {
+            var createFoodDonation = Context.Add(donation);
+            return createFoodDonation.Entity;
+        }
+
         public MoneyDonation CreateMoneyDonation(MoneyDonation moneyDonation)
         {
             var createMoneyDonation = Context.Add(moneyDonation);

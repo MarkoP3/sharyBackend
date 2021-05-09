@@ -38,6 +38,7 @@ namespace SharyApi.Profiles
                 opt => opt.MapFrom(src => src.Country.Name)
                 );
             CreateMap<SolidarityMealPrice, SolidarityMealPriceDto>();
+            CreateMap<FoodDonation, FoodDonationDto>();
         }
     }
 }

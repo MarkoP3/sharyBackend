@@ -48,7 +48,7 @@ namespace SharyApi.Profiles
                 opt => opt.MapFrom(src => src.Currency.Code)
                 );
             CreateMap<Station, Principal>();
-
+            CreateMap<StationCreationDto, Station>();
         }
     }
 }

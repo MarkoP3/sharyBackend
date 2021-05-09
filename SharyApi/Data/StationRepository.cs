@@ -17,6 +17,13 @@ namespace SharyApi.Data
         public Shary2Context Context { get; }
         public IAuthenticationHelper AuthenticationHelper { get; }
 
+        public Station CreateStation(Station station)
+        {
+            station.Id = Guid.NewGuid();
+            var createdStation = Context.Add(station);
+            return createdStation.Entity;
+        }
+
         public MealPrice GetActiveMealPrice()
         {
             return Context.MealPrices.Where(x => x.ValidTo == null).FirstOrDefault();

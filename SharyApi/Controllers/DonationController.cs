@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using SharyApi.Data;
 using SharyApi.Entities;
 using SharyApi.Models;
+using SharyApi.Models.Business;
 using SharyApi.Models.Individual;
 using Stripe;
 using Stripe.Checkout;
@@ -20,7 +22,7 @@ namespace SharyApi.Controllers
     [ApiController]
     public class DonationController : ControllerBase
     {
-        public DonationController(IConfiguration configuraiton, IStationRepository stationRepository, IMapper mapper, IIndividualRepository individualRepository, IDonationRepository donationRepository, IBusinessRepository businessRepository)
+        public DonationController(IConfiguration configuraiton, IStationRepository stationRepository, IMapper mapper, IIndividualRepository individualRepository, IDonationRepository donationRepository, IBusinessRepository businessRepository, LinkGenerator linkGenerator)
         {
             Configuraiton = configuraiton;
             StationRepository = stationRepository;
@@ -28,6 +30,7 @@ namespace SharyApi.Controllers
             IndividualRepository = individualRepository;
             DonationRepository = donationRepository;
             BusinessRepository = businessRepository;
+            LinkGenerator = linkGenerator;
             StripeConfiguration.ApiKey = Configuraiton["Stripe:Test:SecretKey"];
 
         }
@@ -38,6 +41,8 @@ namespace SharyApi.Controllers
         public IIndividualRepository IndividualRepository { get; }
         public IDonationRepository DonationRepository { get; }
         public IBusinessRepository BusinessRepository { get; }
+        public LinkGenerator LinkGenerator { get; }
+
         [Authorize]
         [HttpPost("individual/money")]
         public IActionResult CreateCheckoutSession(MoneyDonationCreationDto moneyDonation)
@@ -146,10 +151,6 @@ namespace SharyApi.Controllers
         [HttpPost("individual/money/confirmation")]
         public IActionResult ConfirmMoneyDonation(MoneyDonationConfirmationDto moneyDonationDto)
         {
-            Console.WriteLine(moneyDonationDto.IndividualID);
-            Console.WriteLine(moneyDonationDto.Quantity);
-            Console.WriteLine(moneyDonationDto.StripeSessionID);
-            Console.WriteLine(moneyDonationDto.MealPriceID);
             Guid individualID;
             if (Request.Cookies["token"] != null)
             {
@@ -242,6 +243,25 @@ namespace SharyApi.Controllers
             if (donations.Count > 0)
                 return Ok(new { numOfPages = IndividualRepository.GetNumberOfSolidarityDonationsPages(individualID), solidarityDonations = Mapper.Map<List<SolidarityDinnerDonationDto>>(donations) });
             return NoContent();
+        }
+        [Authorize]
+        [HttpPost("business/food")]
+        public IActionResult DonateMeals(FoodDonationCreationDto donation)
+        {
+            var businessID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            FoodDonation newDonation = DonationRepository.CreateFoodDonation(new FoodDonation() { BusinessId = businessID, DonationDateTime = DateTime.Now, Id = Guid.NewGuid(), Quantity = donation.Quantity, StationId = donation.StationId });
+            BusinessRepository.SaveChanges();
+            return Created("", Mapper.Map<FoodDonationDto>(newDonation));
+
+        }
+        [Authorize]
+        [HttpPost("business/solidarity")]
+        public IActionResult BusinessSolidarityDonation(SolidarityDonationCreationDto donation)
+        {
+            var businessID = Guid.Parse(new JwtSecurityToken(Request.Cookies["token"]).Claims.First(c => c.Type == "aud").Value);
+            SolidarityDinnerDonation newDonation = DonationRepository.CreateSolidarityDonation(new SolidarityDinnerDonation() { BusinessId = businessID, DonationDateTime = DateTime.Now, Id = Guid.NewGuid(), IndividualId = null, Quantity = donation.Quantity, StripePaymentId = null });
+            BusinessRepository.SaveChanges();
+            return Created("", Mapper.Map<SolidarityDinnerDonationDto>(newDonation));
         }
     }
 }

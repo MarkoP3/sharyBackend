@@ -9,7 +9,6 @@ using SharyApi.Helpers;
 using SharyApi.Models;
 using SharyApi.Models.Individual;
 using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 
@@ -34,21 +33,21 @@ namespace SharyApi.Controllers
         public IAuthenticationHelper AuthenticationHelper { get; }
         public IStationRepository StationRepository { get; }
 
-        [HttpGet]
-        public ActionResult<List<IndividualDto>> GetAllIndividuals()
-        {
-            var individuals = IndividualRepository.GetAllIndividuals();
-            if (individuals.Count > 0)
-            {
-                return Ok(Mapper.Map<List<IndividualDto>>(individuals));
-            }
-            return NoContent();
-        }
-        [HttpGet("{ID}")]
-        public ActionResult<IndividualDto> GetIndividualByID(Guid ID)
-        {
-            return (IndividualRepository.GetIndividualByID(ID).HasNoValue ? NotFound() : Ok(Mapper.Map<IndividualDto>(IndividualRepository.GetIndividualByID(ID).Value)));
-        }
+        //[HttpGet]
+        //public ActionResult<List<IndividualDto>> GetAllIndividuals()
+        //{
+        //    var individuals = IndividualRepository.GetAllIndividuals();
+        //    if (individuals.Count > 0)
+        //    {
+        //        return Ok(Mapper.Map<List<IndividualDto>>(individuals));
+        //    }
+        //    return NoContent();
+        //}
+        //[HttpGet("{ID}")]
+        //public ActionResult<IndividualDto> GetIndividualByID(Guid ID)
+        //{
+        //    return (IndividualRepository.GetIndividualByID(ID).HasNoValue ? NotFound() : Ok(Mapper.Map<IndividualDto>(IndividualRepository.GetIndividualByID(ID).Value)));
+        //}
         [Authorize]
         [HttpGet("accountData")]
         [HttpHead("accountData")]
@@ -84,21 +83,15 @@ namespace SharyApi.Controllers
         [HttpPost]
         public ActionResult<IndividualConfirmationDto> CreateIndividual(IndividualCreationDto businessDto)
         {
-            try
-            {
-                var individual = Mapper.Map<Individual>(businessDto);
-                var hashedPassword = AuthenticationHelper.HashPassword(individual.Password);
-                individual.Password = hashedPassword.Item1;
-                individual.Salt = hashedPassword.Item2;
-                IndividualConfirmationDto individualConfirmation = IndividualRepository.CreateIndividual(individual);
-                IndividualRepository.SaveChanges();
-                string location = LinkGenerator.GetPathByAction("GetIndividualByID", "Individual", new { ID = individualConfirmation.Id });
-                return Created(location, individualConfirmation);
-            }
-            catch
-            {
-                return BadRequest();
-            }
+
+            var individual = Mapper.Map<Individual>(businessDto);
+            var hashedPassword = AuthenticationHelper.HashPassword(individual.Password);
+            individual.Password = hashedPassword.Item1;
+            individual.Salt = hashedPassword.Item2;
+            IndividualConfirmationDto individualConfirmation = IndividualRepository.CreateIndividual(individual);
+            IndividualRepository.SaveChanges();
+            return Created("", individualConfirmation);
+
         }
         [HttpPost("authenticate")]
         public IActionResult Authenticate(Credentials credentials)
@@ -111,42 +104,42 @@ namespace SharyApi.Controllers
             }
             return Unauthorized();
         }
-        [HttpDelete("{ID}")]
-        public IActionResult DeleteIndividual(Guid ID)
-        {
-            try
-            {
-                var individual = IndividualRepository.GetIndividualByID(ID);
-                if (individual == null)
-                {
-                    return NotFound();
-                }
-                IndividualRepository.DeleteIndividual(ID);
-                IndividualRepository.SaveChanges();
-                return NoContent();
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error while deleting an object");
-            }
-        }
+        //[HttpDelete("{ID}")]
+        //public IActionResult DeleteIndividual(Guid ID)
+        //{
+        //    try
+        //    {
+        //        var individual = IndividualRepository.GetIndividualByID(ID);
+        //        if (individual == null)
+        //        {
+        //            return NotFound();
+        //        }
+        //        IndividualRepository.DeleteIndividual(ID);
+        //        IndividualRepository.SaveChanges();
+        //        return NoContent();
+        //    }
+        //    catch
+        //    {
+        //        return StatusCode(StatusCodes.Status500InternalServerError, "Error while deleting an object");
+        //    }
+        //}
         [HttpPut]
         public ActionResult<IndividualDto> UpdateIndividual(IndividualUpdateDto individualDto)
         {
-            try
-            {
-                var oldIndividual = IndividualRepository.GetIndividualByID(individualDto.Id);
-                if (oldIndividual == null)
-                    return NotFound();
-                Individual individual = Mapper.Map<Individual>(individualDto);
-                Mapper.Map(individual, oldIndividual);
-                IndividualRepository.SaveChanges();
-                return Ok(Mapper.Map<IndividualDto>(oldIndividual));
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Update error");
-            }
+            var oldIndividual = IndividualRepository.GetIndividualByID(individualDto.Id).Value;
+            if (oldIndividual == null)
+                return NotFound();
+            var pass = AuthenticationHelper.HashPassword(individualDto.Password);
+
+            oldIndividual.LastName = individualDto.LastName;
+            oldIndividual.FirstName = individualDto.FirstName;
+            oldIndividual.Email = individualDto.Email;
+            oldIndividual.Username = individualDto.Username;
+            oldIndividual.PhoneNumber = individualDto.PhoneNumber;
+            oldIndividual.Salt = pass.Item2;
+            oldIndividual.Password = pass.Item1;
+            IndividualRepository.SaveChanges();
+            return Ok(Mapper.Map<IndividualDto>(oldIndividual));
         }
         [HttpGet("mealPrice")]
         public ActionResult<MealPriceDto> GetActiveMealPrice()

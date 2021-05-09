@@ -74,6 +74,7 @@ namespace SharyApi
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SharyApi", Version = "v1" });
+
             });
 
 
@@ -100,8 +101,12 @@ namespace SharyApi
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SharyApi v1"));
-            }
 
+            }
+            else
+            {
+                app.ConfigureErrorHandling();
+            }
             app.UseHttpsRedirection();
 
 

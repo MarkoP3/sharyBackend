@@ -26,6 +26,7 @@ namespace SharyApi.Data
         {
             individual.Id = Guid.NewGuid();
             var createindividual = Context.Add(individual);
+            Console.WriteLine(createindividual.Entity);
             return Mapper.Map<IndividualConfirmationDto>(createindividual.Entity);
         }
 
