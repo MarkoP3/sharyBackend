@@ -73,7 +73,7 @@ namespace SharyApi.Controllers
             receivedMealDto.Id = Guid.NewGuid();
             var receivedMeal = StationRepository.ReceiveMeal(Mapper.Map<ReceivedMeal>(receivedMealDto));
             StationRepository.SaveChanges();
-            return Ok(Mapper.Map<ReceivedMeal>(receivedMeal));
+            return Ok(Mapper.Map<ReceivedMealDto>(receivedMeal));
         }
         [HttpPost]
         public ActionResult<StationDto> CreateStation(StationCreationDto stationDto)

@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "apis1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.ApiManagement/service/SharyApiapi/apis/SharyApi",
+      "type": "apis.azure"
+    },
+    "mssql1": {
+      "type": "mssql.onprem",
+      "connectionId": "Shary",
+      "secretStore": "AzureAppSettings"
+    }
+  }
+}

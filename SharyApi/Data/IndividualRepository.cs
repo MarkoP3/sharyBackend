@@ -68,7 +68,8 @@ namespace SharyApi.Data
 
         public ICollection<SolidarityDinnerDonation> GetSolidarityDinners(Guid ID, int page)
         {
-            return Context.Individuals.Find(ID).SolidarityDinnerDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList(); ;
+            Console.WriteLine(Context.Individuals.Find(ID).SolidarityDinnerDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList().Count);
+            return Context.Individuals.Find(ID).SolidarityDinnerDonations.Skip((page - 1) * Convert.ToInt32(Configuration["recordsPerPage"])).Take(Convert.ToInt32(Configuration["recordsPerPage"])).ToList();
         }
 
         public bool SaveChanges()

@@ -49,6 +49,8 @@ namespace SharyApi.Profiles
                 );
             CreateMap<Station, Principal>();
             CreateMap<StationCreationDto, Station>();
+            CreateMap<ReceivedMeal, ReceivedMealDto>();
+            CreateMap<ReceivedMealDto, ReceivedMeal>();
         }
     }
 }
